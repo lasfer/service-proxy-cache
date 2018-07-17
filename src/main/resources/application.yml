@@ -1,0 +1,21 @@
+#intercepts context "mysite"
+#sensitives headers was added to avoid lossing Basic Auth Header 
+zuul:
+  host:
+    connect-timeout-millis: 60000 # starting the connection 
+    socket-timeout-millis: 60000  #read
+  routes:
+    #context to intercept
+    mysite:
+      sensitiveHeaders: Cookie,Set-Cookie      
+      #destination URL for context pasivas
+      url: http://host:8088/mysite
+      timeout: 50000
+    othersite: 
+      url: http://host2:8088/mysite2
+
+    
+#listen port in proxy server      
+server:
+  port: 8088
+

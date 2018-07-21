@@ -49,7 +49,7 @@ public class PostCacherFilter extends ZuulFilter {
 					LOGGER.info("CACHE KEY:" + key);
 				}
 			} catch (Exception e) {
-				LOGGER.error("ERROR AL GUARDAR EL RESPONSE REAL: \n", e);
+				LOGGER.error("ERROR SAVING/RETURNING REAL RESPONSE: \n", e);
 			}
 		}
 		return null;

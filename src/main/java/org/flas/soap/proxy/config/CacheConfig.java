@@ -19,6 +19,10 @@ public class CacheConfig {
 	private long elementsExpireTimeout;
 	@Value("${cache.util.fileCaching:false}")
 	private Boolean fileCaching;
+	@Value("${cache.util.offline:false}")
+	private Boolean offline;
+	@Value("${cache.util.dirPath:/tmp}")
+	private String dirPath;
 	private String startTagForKey;
 	private String endTagForKey;
 	private String[] excludes;
@@ -47,6 +51,14 @@ public class CacheConfig {
 		this.fileCaching = fileCaching;
 	}
 
+	public Boolean getOffline() {
+		return offline;
+	}
+
+	public void setOffline(Boolean offline) {
+		this.offline = offline;
+	}
+
 	public String getStartTagForKey() {
 		return startTagForKey;
 	}
@@ -69,6 +81,14 @@ public class CacheConfig {
 
 	public void setExcludes(String[] excludes) {
 		this.excludes = excludes;
+	}
+
+	public String getDirPath() {
+		return dirPath;
+	}
+
+	public void setDirPath(String dirPath) {
+		this.dirPath = dirPath;
 	}
 
 }

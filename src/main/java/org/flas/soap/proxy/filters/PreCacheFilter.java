@@ -10,6 +10,7 @@ import org.flas.soap.proxy.services.CacheUtilService;
 import org.jboss.logging.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import com.netflix.ribbon.proxy.annotation.Http.HttpMethod;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
 
@@ -17,7 +18,7 @@ public class PreCacheFilter extends ZuulFilter {
 	private static final Logger LOGGER = Logger.getLogger(PreCacheFilter.class);
 
 	private enum Actions {
-		SAVE, CLEAN, ENABLE_FILES, DISABLE_FILES, SET
+		SAVE, CLEAN, ENABLE_FILES, DISABLE_FILES, SET, OFFLINE, ONLINE
 	}
 
 	@Autowired
@@ -43,8 +44,13 @@ public class PreCacheFilter extends ZuulFilter {
 		} catch (IOException e) {
 			LOGGER.error("error al copiar el contenido del request", e);
 		}
+		String cacheKey;
 		String document = writer.toString();
-		String cacheKey = cache.generateHash(ctx.getRequest().getRequestURI(), document);
+		if(HttpMethod.GET.name().equals(ctx.getRequest().getMethod())) {
+			cacheKey=ctx.getRequest().getRequestURI()+"wsdlGET"; 
+		}else {
+			cacheKey = cache.generateHash(ctx.getRequest().getRequestURI(), document);
+		}
 
 		if (Actions.CLEAN.name().equals(document)) {
 			cache.clean();
@@ -57,6 +63,14 @@ public class PreCacheFilter extends ZuulFilter {
 			ctx.setSendZuulResponse(false);
 		} else if (Actions.DISABLE_FILES.name().equals(document)) {
 			cacheConfig.setFileCaching(false);
+			ctx.setSendZuulResponse(false);
+		} else if (Actions.OFFLINE.name().equals(document)) {
+			//OFFLINE needs filecaching enabled
+			cacheConfig.setFileCaching(true);
+			cacheConfig.setOffline(true);
+			ctx.setSendZuulResponse(false);
+		} else if (Actions.ONLINE.name().equals(document)) {
+			cacheConfig.setOffline(false);
 			ctx.setSendZuulResponse(false);
 		} else if (document!=null && document.startsWith(Actions.SET.name())) {
 			try {
@@ -83,6 +97,16 @@ public class PreCacheFilter extends ZuulFilter {
 					LOGGER.error("error al escribir el response desde el cache", e);
 				}
 
+				ctx.setSendZuulResponse(false);
+			} else if (cacheConfig.getOffline()) {
+				try {
+					String response = cache.getAnyFileContentSameService(ctx.getRequest().getRequestURI());
+					ctx.getResponse().getOutputStream().write(response.getBytes());
+					LOGGER.info("RANDOM FROM CACHE: \n" + response);
+					LOGGER.info("CACHE KEY(THERE IS NO FILE, RANDOM RESPONSE):" + cacheKey);
+				} catch (IOException e) {
+					LOGGER.error("error al escribir el response desde el cache", e);
+				}
 				ctx.setSendZuulResponse(false);
 			}
 		}

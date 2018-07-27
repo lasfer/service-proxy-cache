@@ -94,7 +94,7 @@ public class CacheUtilService {
 		for (String exclude : excludes) {
 			documentAux = documentAux.replaceAll(exclude + "?.*?" + exclude, "");
 		}
-		return service + "." + documentAux.hashCode();
+		return service + "." + documentAux.replaceAll("\\s","").hashCode();
 	}
 
 	public void clean() {

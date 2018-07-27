@@ -1,5 +1,6 @@
 package org.flas.soap.proxy.filters;
 
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.zip.GZIPInputStream;
 
@@ -41,8 +42,8 @@ public class PostCacherFilter extends ZuulFilter {
 			String key = (String) ctx.get(GlobalConstants.CONTEXT_CACHE_KEY);
 			try {
 				if (!cache.contains(key) && ctx.getResponseDataStream() != null) {
-					cache.put(key, CharStreams.toString(
-							new InputStreamReader(new GZIPInputStream(ctx.getResponseDataStream()), "UTF-8")));					
+					InputStream inputStream=ctx.getResponseGZipped()? new GZIPInputStream(ctx.getResponseDataStream()):ctx.getResponseDataStream();
+					cache.put(key, CharStreams.toString(new InputStreamReader(inputStream, "UTF-8"))); 												
 					String response = cache.get(key);
 					ctx.setResponseBody(response);
 					LOGGER.info("REAL RESPONSE: \n" + response);

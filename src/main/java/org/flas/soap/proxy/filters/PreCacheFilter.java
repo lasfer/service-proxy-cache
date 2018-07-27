@@ -47,7 +47,7 @@ public class PreCacheFilter extends ZuulFilter {
 		String cacheKey;
 		String document = writer.toString();
 		if(HttpMethod.GET.name().equals(ctx.getRequest().getMethod())) {
-			cacheKey=ctx.getRequest().getRequestURI()+"wsdlGET"; 
+			cacheKey=ctx.getRequest().getRequestURI()+".wsdl_GET"; 
 		}else {
 			cacheKey = cache.generateHash(ctx.getRequest().getRequestURI(), document);
 		}

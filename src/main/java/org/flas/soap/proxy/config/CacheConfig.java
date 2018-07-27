@@ -84,7 +84,10 @@ public class CacheConfig {
 	}
 
 	public String getDirPath() {
-		return dirPath;
+		if(dirPath.endsWith("/"))
+			return dirPath;
+		else
+			return dirPath + "/";
 	}
 
 	public void setDirPath(String dirPath) {

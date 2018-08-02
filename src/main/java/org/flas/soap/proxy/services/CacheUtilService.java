@@ -21,6 +21,7 @@ import javax.annotation.PostConstruct;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.BooleanUtils;
 import org.flas.soap.proxy.config.CacheConfig;
+import org.flas.soap.proxy.filters.PreCacheFilter;
 import org.jboss.logging.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -76,12 +77,20 @@ public class CacheUtilService {
 		return value;
 	}
 
-	public String generateHash(String service, String document) {
+	/**
+	 * Generates a key based on service name + hash from body request
+	 * 
+	 * @param service
+	 * @param document
+	 * @param trimAllSpaces
+	 * @return
+	 */
+	public String generateHash(String service, String document, boolean trimAllSpaces) {
 
 		String documentAux = null;
 		String startTag = cacheConfig.getStartTagForKey();
 		String endTag = cacheConfig.getEndTagForKey();
-		String []excludes = cacheConfig.getExcludes();
+		String[] excludes = cacheConfig.getExcludes();
 
 		Pattern p = Pattern.compile(startTag + "(.*?)" + endTag, Pattern.DOTALL);
 		Matcher m = p.matcher(document);
@@ -94,7 +103,9 @@ public class CacheUtilService {
 		for (String exclude : excludes) {
 			documentAux = documentAux.replaceAll(exclude + "?.*?" + exclude, "");
 		}
-		return service + "." + documentAux.replaceAll("\\s","").hashCode();
+		documentAux = trimAllSpaces ? documentAux.replaceAll("\\s", "") : documentAux;
+
+		return service + "." + documentAux.hashCode();
 	}
 
 	public void clean() {
@@ -114,9 +125,7 @@ public class CacheUtilService {
 	}
 
 	private String getFileName(String key) {
-		String[] stringSplited = key.split("[.]");
-		int length = stringSplited.length;
-		return cacheConfig.getDirPath() + stringSplited[length - 2] + "." + stringSplited[length - 1] + ".soa";
+		return cacheConfig.getDirPath() + key + ".soa";
 	}
 
 	private String getFileContent(String filePath) {
@@ -142,12 +151,17 @@ public class CacheUtilService {
 		int length = stringSplited.length;		
 		Path dir = Paths.get(cacheConfig.getDirPath());
 		List<File> files = new ArrayList<>();
+		
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, stringSplited[length - 1]+ "\\.*soa")) {
 		    for (Path entry: stream) {
-		        files.add(entry.toFile());
+		    	//excluding wsdls definition files cached on HDD		    	
+		    	File fileToAdd=entry.toFile();
+		    	//TODO remove .0.soa
+		    	if(!fileToAdd.getName().endsWith(".0.soa") && !fileToAdd.getName().endsWith(PreCacheFilter.WSDL_SUFIX + ".soa"))
+		    		files.add(fileToAdd);
 		    }
 		} catch (Exception e) {
-			LOGGER.error("Error finding any response for service" + service, e);
+			LOGGER.info("There isn't any responses for service" + service, e);
 		}
 		if(CollectionUtils.isNotEmpty(files)) {
 			Random r = new Random();

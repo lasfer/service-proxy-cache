@@ -20,6 +20,8 @@ public class PreCacheFilter extends ZuulFilter {
 	private enum Actions {
 		SAVE, CLEAN, ENABLE_FILES, DISABLE_FILES, SET, OFFLINE, ONLINE
 	}
+	
+	public static final String WSDL_SUFIX=".wsdl_GET";
 
 	@Autowired
 	private CacheUtilService cache;
@@ -46,10 +48,16 @@ public class PreCacheFilter extends ZuulFilter {
 		}
 		String cacheKey;
 		String document = writer.toString();
-		if(HttpMethod.GET.name().equals(ctx.getRequest().getMethod())) {
-			cacheKey=ctx.getRequest().getRequestURI()+".wsdl_GET"; 
-		}else {
-			cacheKey = cache.generateHash(ctx.getRequest().getRequestURI(), document);
+		//get url ending (after last /)
+		String [] parts1=ctx.getRequest().getRequestURI().split("/");
+		//get url ending (after last . if exist)
+		String [] parts2=parts1[parts1.length-1].split("\\.");
+		String service=parts2[parts2.length-1];
+		boolean get=HttpMethod.GET.name().equals(ctx.getRequest().getMethod());
+		if (get) {
+			cacheKey = service + WSDL_SUFIX;
+		} else {
+			cacheKey = cache.generateHash(service, document, false);
 		}
 
 		if (Actions.CLEAN.name().equals(document)) {
@@ -75,37 +83,45 @@ public class PreCacheFilter extends ZuulFilter {
 		} else if (document!=null && document.startsWith(Actions.SET.name())) {
 			try {
 			String [] parts=document.split(":::");
-			String cacheKey1 = cache.generateHash(ctx.getRequest().getRequestURI(), parts[1]);
-			cache.put(cacheKey1, parts[2]);
+			cacheKey = cache.generateHash(service, parts[1],true);
+			cache.put(cacheKey, parts[2]);
 			ctx.getResponse().getOutputStream().write(("SAVED:"+  cacheKey).getBytes());
 			}catch(Exception e) {
 				LOGGER.error("Error setting mock response: " + cacheKey ,e);
-			}
-			
+			}			
 			ctx.setSendZuulResponse(false);
 		} else {
-
 			LOGGER.info("REQUEST: \n" + document);
 			ctx.set(GlobalConstants.CONTEXT_CACHE_KEY, cacheKey);
 			if (cache.contains(cacheKey)) {
-
+				//TODO remove this variant (use allways space triming to generate key) 
 				try {
 					ctx.getResponse().getOutputStream().write(cache.get(cacheKey).getBytes());
-					LOGGER.info("FROM CACHE: \n" + cache.get(cacheKey));
+					LOGGER.info("FROM CACHE OLD(w/o trim): \n" + cache.get(cacheKey));
 					LOGGER.info("CACHE KEY:" + cacheKey);
 				} catch (IOException e) {
-					LOGGER.error("error al escribir el response desde el cache", e);
+					LOGGER.error("error writing response from cache (old)", e);
 				}
 
 				ctx.setSendZuulResponse(false);
-			} else if (cacheConfig.getOffline()) {
+			} else if (cache.contains(cache.generateHash(service, document, true))) {
+				cacheKey = cache.generateHash(service, document, true);
 				try {
-					String response = cache.getAnyFileContentSameService(ctx.getRequest().getRequestURI());
+					ctx.getResponse().getOutputStream().write(cache.get(cacheKey).getBytes());
+					LOGGER.info("FROM CACHE TRIMED: \n" + cache.get(cacheKey));
+					LOGGER.info("CACHE KEY:" + cacheKey);
+				} catch (IOException e) {
+					LOGGER.error("error writing response from cache (trim)", e);
+				}
+				ctx.setSendZuulResponse(false);
+			} else if (cacheConfig.getOffline() && !get) {
+				try {
+					String response = cache.getAnyFileContentSameService(service);
 					ctx.getResponse().getOutputStream().write(response.getBytes());
 					LOGGER.info("RANDOM FROM CACHE: \n" + response);
 					LOGGER.info("CACHE KEY(THERE IS NO FILE, RANDOM RESPONSE):" + cacheKey);
 				} catch (IOException e) {
-					LOGGER.error("error al escribir el response desde el cache", e);
+					LOGGER.error("error writing response from cache (random)", e);
 				}
 				ctx.setSendZuulResponse(false);
 			}

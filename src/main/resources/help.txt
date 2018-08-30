@@ -1,0 +1,38 @@
+CLEAN  -  cleans all entries in memory cache - no params - no return
+(do not remove files, only removes memory entries)
+
+DISABLE_FILES - Disables file caching - no params - no return
+
+ENABLE_FILES -  Enables file caching - no params - no return
+
+HELP - returns this help 
+
+
+----------------------------------
+KEY - returns key generated 
+----------------------------------
+params -> soap request 
+
+return -> the key
+
+usage  KEY:::<AsoapRequest> 
+-----------------------------------
+
+
+ONLINE - Disable offline behavior  - no params - no return
+
+OFFLINE - Enable offline behavior  - no params - no return
+(When your service provider is completely down, this mode returns some response cached before) 
+
+SAVE -  Persist all cache memory entries in file system - no params - no return
+
+
+----------------------------------------------
+SET - set a response for a given request
+----------------------------------------------
+params(2) -> soap request, soap response
+
+return -> the key used to store given response
+
+usage  KEY:::<AsoapRequest>:::<AsoapResponse>
+----------------------------------------------

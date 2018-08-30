@@ -42,12 +42,17 @@ public class PostCacherFilter extends ZuulFilter {
 			String key = (String) ctx.get(GlobalConstants.CONTEXT_CACHE_KEY);
 			try {
 				if (!cache.contains(key) && ctx.getResponseDataStream() != null) {
-					InputStream inputStream=ctx.getResponseGZipped()? new GZIPInputStream(ctx.getResponseDataStream()):ctx.getResponseDataStream();
-					cache.put(key, CharStreams.toString(new InputStreamReader(inputStream, "UTF-8"))); 												
-					String response = cache.get(key);
+					InputStream inputStream = ctx.getResponseGZipped()
+							? new GZIPInputStream(ctx.getResponseDataStream())
+							: ctx.getResponseDataStream();
+					String response = CharStreams.toString(new InputStreamReader(inputStream, "UTF-8"));
+					boolean isCacheableResponse = cache.isCacheableResponse(response);
+					if (isCacheableResponse)
+						cache.put(key, response);
 					ctx.setResponseBody(response);
-					LOGGER.info("REAL RESPONSE: \n" + response);
-					LOGGER.info("CACHE KEY:" + key);
+					LOGGER.info("Was Cached: " + isCacheableResponse + "\n REAL RESPONSE: \n" + response);
+					if (isCacheableResponse)
+						LOGGER.info("CACHED - CACHE KEY: " + key);
 				}
 			} catch (Exception e) {
 				LOGGER.error("ERROR SAVING/RETURNING REAL RESPONSE: \n", e);

@@ -20,6 +20,7 @@ import javax.annotation.PostConstruct;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.BooleanUtils;
+import org.apache.commons.lang.StringUtils;
 import org.flas.soap.proxy.config.CacheConfig;
 import org.flas.soap.proxy.filters.PreCacheFilter;
 import org.jboss.logging.Logger;
@@ -32,6 +33,8 @@ import com.google.common.cache.CacheBuilder;
 /**
  * 
  * @author fernando.las@gmail.com
+ * 
+ *         Cache Service based on Guava cache (Google)
  *
  */
 
@@ -49,6 +52,12 @@ public class CacheUtilService {
 				.expireAfterAccess(cacheConfig.getElementsExpireTimeout(), TimeUnit.MINUTES).build();
 	}
 
+	/**
+	 * save a key value in cache
+	 * 
+	 * @param key
+	 * @param value
+	 */
 	public void put(String key, String value) {
 		cache.put(key, value);
 		if (cacheConfig.getFileCaching()) {
@@ -60,14 +69,31 @@ public class CacheUtilService {
 		}
 	}
 
+	/**
+	 * checks if key is in cache
+	 * 
+	 * @param key
+	 * @return
+	 */
 	public boolean contains(String key) {
 		return cache.getIfPresent(key) != null || checkFile(key);
 	}
-	
+
+	/**
+	 * checks if file exists
+	 * 
+	 * @param key
+	 * @return true if file exists
+	 */
 	private boolean checkFile(String key) {
 		return BooleanUtils.isTrue(cacheConfig.getFileCaching()) && fileExists(getFileName(key));
 	}
 
+	/**
+	 * 
+	 * @param key
+	 * @return String with cached value for matched key
+	 */
 	public String get(String key) {
 		String value = cache.getIfPresent(key);
 		if (value == null && checkFile(key)) {
@@ -83,7 +109,7 @@ public class CacheUtilService {
 	 * @param service
 	 * @param document
 	 * @param trimAllSpaces
-	 * @return
+	 * @return String with generated key
 	 */
 	public String generateHash(String service, String document, boolean trimAllSpaces) {
 
@@ -113,6 +139,9 @@ public class CacheUtilService {
 		cache.invalidateAll();
 	}
 
+	/**
+	 * store all entries in HDD
+	 */
 	public void store() {
 		Map<String, String> map = cache.asMap();
 		for (Map.Entry<String, String> entry : map.entrySet()) {
@@ -128,6 +157,12 @@ public class CacheUtilService {
 		return cacheConfig.getDirPath() + key + ".soa";
 	}
 
+	/**
+	 * returns file's content
+	 * 
+	 * @param filePath
+	 * @return String with file content
+	 */
 	private String getFileContent(String filePath) {
 		StringBuilder contentBuilder = new StringBuilder();
 		try (Stream<String> stream = Files.lines(Paths.get(filePath), StandardCharsets.UTF_8)) {
@@ -138,9 +173,10 @@ public class CacheUtilService {
 		return contentBuilder.toString();
 
 	}
+
 	/**
-	 * Used for offline mode, 
-	 * if there is any response cached for this service it will be returned
+	 * Used for offline mode, if there is any response cached for this service it
+	 * will be returned
 	 * 
 	 * @param service
 	 * @return random response
@@ -148,39 +184,68 @@ public class CacheUtilService {
 	public String getAnyFileContentSameService(String service) {
 		StringBuilder contentBuilder = new StringBuilder();
 		String[] stringSplited = service.split("[.]");
-		int length = stringSplited.length;		
+		int length = stringSplited.length;
 		Path dir = Paths.get(cacheConfig.getDirPath());
 		List<File> files = new ArrayList<>();
-		
-		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, stringSplited[length - 1]+ "\\.*soa")) {
-		    for (Path entry: stream) {
-		    	//excluding wsdls definition files cached on HDD		    	
-		    	File fileToAdd=entry.toFile();
-		    	//TODO remove .0.soa
-		    	if(!fileToAdd.getName().endsWith(".0.soa") && !fileToAdd.getName().endsWith(PreCacheFilter.WSDL_SUFIX + ".soa"))
-		    		files.add(fileToAdd);
-		    }
+
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, stringSplited[length - 1] + "\\.*soa")) {
+			for (Path entry : stream) {
+				// excluding wsdls definition files cached on HDD
+				File fileToAdd = entry.toFile();
+				// TODO remove .0.soa
+				if (!fileToAdd.getName().endsWith(".0.soa")
+						&& !fileToAdd.getName().endsWith(PreCacheFilter.WSDL_SUFIX + ".soa"))
+					files.add(fileToAdd);
+			}
 		} catch (Exception e) {
 			LOGGER.info("There isn't any responses for service" + service, e);
 		}
-		if(CollectionUtils.isNotEmpty(files)) {
+		if (CollectionUtils.isNotEmpty(files)) {
 			Random r = new Random();
-			File file = files.get(r.nextInt(files.size()));			
+			File file = files.get(r.nextInt(files.size()));
 			try (Stream<String> stream2 = Files.lines(Paths.get(file.getPath()), StandardCharsets.UTF_8)) {
 				stream2.forEach(s -> contentBuilder.append(s).append("\r\n"));
 			} catch (IOException e) {
 				LOGGER.error("Error getting file content", e);
 			}
-		}else {
+		} else {
 			LOGGER.info("There is no response for service" + service);
 		}
 		return contentBuilder.toString();
 	}
 
+	/**
+	 * return true if the file given exists
+	 * 
+	 * @param filePath
+	 * @return true if file exists
+	 */
 	private boolean fileExists(String filePath) {
 		LOGGER.debug("Getting File:" + filePath);
 		File tmpDir = new File(filePath);
 		return tmpDir.exists();
 	}
 
+	public boolean isCacheableResponse(String response) {
+		boolean iscacheableResponse = false;
+		try {
+			if (StringUtils.isNotBlank(cacheConfig.getResponseIncludePattern())) {
+				Pattern p = Pattern.compile(cacheConfig.getResponseIncludePattern(), Pattern.DOTALL);
+				Matcher m = p.matcher(response);
+				if (m.find())
+					iscacheableResponse = true;
+			} else if (StringUtils.isNotBlank(cacheConfig.getResponseExcludePattern())) {
+				Pattern p = Pattern.compile(cacheConfig.getResponseExcludePattern(), Pattern.DOTALL);
+				Matcher m = p.matcher(response);
+				if (!m.find())
+					iscacheableResponse = true;
+			} else {
+				iscacheableResponse = true;
+			}
+		} catch (Exception e) {
+			LOGGER.error("isCacheableResponse - Error", e);
+			iscacheableResponse = true;
+		}
+		return iscacheableResponse;
+	}
 }

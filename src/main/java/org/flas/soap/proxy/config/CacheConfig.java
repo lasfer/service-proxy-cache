@@ -26,6 +26,10 @@ public class CacheConfig {
 	private String startTagForKey;
 	private String endTagForKey;
 	private String[] excludes;
+	@Value("${cache.util.response.pattern.include}")
+	private String responseIncludePattern;
+	@Value("${cache.util.response.pattern.exclude}")
+	private String responseExcludePattern;
 
 	public long getMaxSize() {
 		return maxSize;
@@ -84,7 +88,7 @@ public class CacheConfig {
 	}
 
 	public String getDirPath() {
-		if(dirPath.endsWith("/"))
+		if (dirPath.endsWith("/"))
 			return dirPath;
 		else
 			return dirPath + "/";
@@ -94,4 +98,19 @@ public class CacheConfig {
 		this.dirPath = dirPath;
 	}
 
+	public String getResponseIncludePattern() {
+		return responseIncludePattern;
+	}
+
+	public void setResponseIncludePattern(String responseIncludePattern) {
+		this.responseIncludePattern = responseIncludePattern;
+	}
+
+	public String getResponseExcludePattern() {
+		return responseExcludePattern;
+	}
+
+	public void setResponseExcludePattern(String responseExcludePattern) {
+		this.responseExcludePattern = responseExcludePattern;
+	}
 }

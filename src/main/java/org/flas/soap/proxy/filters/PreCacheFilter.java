@@ -2,8 +2,11 @@ package org.flas.soap.proxy.filters;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.flas.soap.proxy.GlobalConstants;
 import org.flas.soap.proxy.config.CacheConfig;
 import org.flas.soap.proxy.config.Help;
@@ -49,11 +52,16 @@ public class PreCacheFilter extends ZuulFilter {
 		}
 		String cacheKey;
 		String document = writer.toString();
-		// get url ending (after last /)
-		String[] parts1 = ctx.getRequest().getRequestURI().split("/");
-		// get url ending (after last . if exist)
-		String[] parts2 = parts1[parts1.length - 1].split("\\.");
-		String service = parts2[parts2.length - 1];
+		String service;
+		if (StringUtils.isNotBlank(cacheConfig.getKeyPrefix())) {
+			service = getRequestMethodName(document);
+		} else {
+			// get url ending (after last /)
+			String[] parts1 = ctx.getRequest().getRequestURI().split("/");
+			// get url ending (after last . if exist)
+			String[] parts2 = parts1[parts1.length - 1].split("\\.");
+			service = parts2[parts2.length - 1];
+		}
 		boolean get = HttpMethod.GET.name().equals(ctx.getRequest().getMethod());
 		if (get) {
 			cacheKey = service + WSDL_SUFIX;
@@ -137,5 +145,20 @@ public class PreCacheFilter extends ZuulFilter {
 
 	public boolean shouldFilter() {
 		return true;
+	}
+	/**
+	 * Given a request, takes the soap method name
+	 * 
+	 * @param document
+	 * @return
+	 */
+	public String getRequestMethodName(String document) {
+		Pattern p = Pattern.compile(cacheConfig.getKeyPrefix(), Pattern.DOTALL);
+		Matcher m = p.matcher(document);
+		String method = StringUtils.EMPTY;
+		while (m.find()) {
+			method = m.group(1);
+		}
+		return method;
 	}
 }

@@ -25,6 +25,7 @@ public class CacheConfig {
 	private String dirPath;
 	private String startTagForKey;
 	private String endTagForKey;
+	private String keyPrefix;
 	private String[] excludes;
 	@Value("${cache.util.response.pattern.include}")
 	private String responseIncludePattern;
@@ -112,5 +113,13 @@ public class CacheConfig {
 
 	public void setResponseExcludePattern(String responseExcludePattern) {
 		this.responseExcludePattern = responseExcludePattern;
+	}
+
+	public String getKeyPrefix() {
+		return keyPrefix;
+	}
+
+	public void setKeyPrefix(String keyPrefix) {
+		this.keyPrefix = keyPrefix;
 	}
 }

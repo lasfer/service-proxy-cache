@@ -248,4 +248,11 @@ public class CacheUtilService {
 		}
 		return iscacheableResponse;
 	}
+	/**
+	 * size - elements cached
+	 * @return
+	 */
+	public long size() {
+		return cache.size();
+	}
 }

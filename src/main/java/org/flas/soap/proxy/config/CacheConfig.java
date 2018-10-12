@@ -31,7 +31,9 @@ public class CacheConfig {
 	private String responseIncludePattern;
 	@Value("${cache.util.response.pattern.exclude}")
 	private String responseExcludePattern;
-
+	@Value("${cache.util.autoStoreInFilesDaemon:false}")
+	private Boolean autoStoreInFilesDaemon;
+	
 	public long getMaxSize() {
 		return maxSize;
 	}
@@ -121,5 +123,13 @@ public class CacheConfig {
 
 	public void setKeyPrefix(String keyPrefix) {
 		this.keyPrefix = keyPrefix;
+	}
+
+	public Boolean getAutoStoreInFilesDaemon() {
+		return autoStoreInFilesDaemon;
+	}
+
+	public void setAutoStoreInFilesDaemon(Boolean autoStoreInFilesDaemon) {
+		this.autoStoreInFilesDaemon = autoStoreInFilesDaemon;
 	}
 }

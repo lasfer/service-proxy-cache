@@ -52,21 +52,13 @@ public class PreCacheFilter extends ZuulFilter {
 		}
 		String cacheKey;
 		String document = writer.toString();
-		String service;
-		if (StringUtils.isNotBlank(cacheConfig.getKeyPrefix())) {
-			service = getRequestMethodName(document);
-		} else {
-			// get url ending (after last /)
-			String[] parts1 = ctx.getRequest().getRequestURI().split("/");
-			// get url ending (after last . if exist)
-			String[] parts2 = parts1[parts1.length - 1].split("\\.");
-			service = parts2[parts2.length - 1];
-		}
+		String keyPrefix=getKeyPrefix(document, ctx.getRequest().getRequestURI());
+		
 		boolean get = HttpMethod.GET.name().equals(ctx.getRequest().getMethod());
 		if (get) {
-			cacheKey = service + WSDL_SUFIX;
+			cacheKey = keyPrefix + WSDL_SUFIX;
 		} else {
-			cacheKey = cache.generateHash(service, document, true);
+			cacheKey = cache.generateHash(keyPrefix, document, true);
 		}
 
 		if (Actions.CLEAN.name().equals(document)) {
@@ -75,7 +67,7 @@ public class PreCacheFilter extends ZuulFilter {
 		} else if (document != null && document.startsWith(Actions.KEY.name())) {
 			String[] parts = document.split(":::");
 			try {
-				cacheKey = cache.generateHash(service, parts[1], true);
+				cacheKey = cache.generateHash(keyPrefix, parts[1], true);
 				ctx.getResponse().getOutputStream().write(("key:    " + cacheKey).getBytes());
 			} catch (Exception e) {
 				LOGGER.error("Error writting KEY: " + cacheKey, e);
@@ -108,7 +100,7 @@ public class PreCacheFilter extends ZuulFilter {
 		} else if (document != null && document.startsWith(Actions.SET.name())) {
 			try {
 				String[] parts = document.split(":::");
-				cacheKey = cache.generateHash(service, parts[1], true);
+				cacheKey = cache.generateHash(keyPrefix, parts[1], true);
 				cache.put(cacheKey, parts[2]);
 				ctx.getResponse().getOutputStream().write(("SAVED:" + cacheKey).getBytes());
 			} catch (Exception e) {
@@ -130,7 +122,7 @@ public class PreCacheFilter extends ZuulFilter {
 				ctx.setSendZuulResponse(false);
 			} else if (cacheConfig.getOffline() && !get) {
 				try {
-					String response = cache.getAnyFileContentSameService(service);
+					String response = cache.getAnyFileContentSameService(keyPrefix);
 					ctx.getResponse().getOutputStream().write(response.getBytes());
 					LOGGER.info("RANDOM FROM CACHE: \n" + response);
 					LOGGER.info("CACHE KEY(THERE IS NO FILE, RANDOM RESPONSE):" + cacheKey);
@@ -141,6 +133,29 @@ public class PreCacheFilter extends ZuulFilter {
 			}
 		}
 		return null;
+	}
+	
+	/**
+	 * Returns key prefix
+	 * based on pattern if it is defined
+	 * or based on url service
+	 * 
+	 * @param document
+	 * @param requestURI
+	 * @return
+	 */
+	private String getKeyPrefix(String document, String requestURI) {
+		String keyPrefix;
+		if (StringUtils.isNotBlank(cacheConfig.getKeyPrefix())) {
+			keyPrefix = getRequestMethodName(document);
+		} else {
+			// get url ending (after last /)
+			String[] parts1 = requestURI.split("/");
+			// get url ending (after last . if exist)
+			String[] parts2 = parts1[parts1.length - 1].split("\\.");
+			keyPrefix = parts2[parts2.length - 1];
+		}
+		return keyPrefix;
 	}
 
 	public boolean shouldFilter() {

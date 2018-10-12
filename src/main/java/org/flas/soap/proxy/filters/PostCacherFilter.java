@@ -46,7 +46,7 @@ public class PostCacherFilter extends ZuulFilter {
 							? new GZIPInputStream(ctx.getResponseDataStream())
 							: ctx.getResponseDataStream();
 					String response = CharStreams.toString(new InputStreamReader(inputStream, "UTF-8"));
-					boolean isCacheableResponse = cache.isCacheableResponse(response);
+					boolean isCacheableResponse = cache.isCacheableResponse(response) || key.endsWith(PreCacheFilter.WSDL_SUFIX);
 					if (isCacheableResponse)
 						cache.put(key, response);
 					ctx.setResponseBody(response);

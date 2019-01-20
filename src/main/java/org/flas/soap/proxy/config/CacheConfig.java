@@ -33,6 +33,8 @@ public class CacheConfig {
 	private String responseExcludePattern;
 	@Value("${cache.util.autoStoreInFilesDaemon:false}")
 	private Boolean autoStoreInFilesDaemon;
+	@Value("${cache.util.enabled:true}")
+	private Boolean enabled;
 	
 	public long getMaxSize() {
 		return maxSize;
@@ -131,5 +133,13 @@ public class CacheConfig {
 
 	public void setAutoStoreInFilesDaemon(Boolean autoStoreInFilesDaemon) {
 		this.autoStoreInFilesDaemon = autoStoreInFilesDaemon;
+	}
+
+	public Boolean getEnabled() {
+		return enabled;
+	}
+
+	public void setEnabled(Boolean enabled) {
+		this.enabled = enabled;
 	}
 }

@@ -22,7 +22,7 @@ public class PreCacheFilter extends ZuulFilter {
 	private static final Logger LOGGER = Logger.getLogger(PreCacheFilter.class);
 
 	private enum Actions {
-		SAVE, CLEAN, ENABLE_FILES, DISABLE_FILES, SET, OFFLINE, ONLINE, KEY, HELP
+		SAVE, CLEAN, ENABLE_FILES, DISABLE_FILES, SET, OFFLINE, ONLINE, KEY, HELP, ENABLE_CACHE, DISABLE_CACHE
 	}
 
 	public static final String WSDL_SUFIX = ".wsdl_GET";
@@ -89,6 +89,14 @@ public class PreCacheFilter extends ZuulFilter {
 		} else if (Actions.DISABLE_FILES.name().equals(document)) {
 			cacheConfig.setFileCaching(false);
 			ctx.setSendZuulResponse(false);
+		} else if (Actions.ENABLE_CACHE.name().equals(document)) {
+			cacheConfig.setEnabled(true);
+			ctx.setSendZuulResponse(false);
+		} else if (Actions.DISABLE_CACHE.name().equals(document)) {
+			cache.store();
+			cache.clean();
+			cacheConfig.setEnabled(false);
+			ctx.setSendZuulResponse(false);
 		} else if (Actions.OFFLINE.name().equals(document)) {
 			// OFFLINE needs filecaching enabled
 			cacheConfig.setFileCaching(true);
@@ -110,7 +118,7 @@ public class PreCacheFilter extends ZuulFilter {
 		} else {
 			LOGGER.info("REQUEST: \n" + document);
 			ctx.set(GlobalConstants.CONTEXT_CACHE_KEY, cacheKey);
-			if (cache.contains(cacheKey)) {
+			if (cache.contains(cacheKey) && cacheConfig.getEnabled()) {
 				try {
 					ctx.getResponse().getOutputStream().write(cache.get(cacheKey).getBytes());
 					LOGGER.info("FROM CACHE: \n" + cache.get(cacheKey));

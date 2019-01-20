@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.util.zip.GZIPInputStream;
 
 import org.flas.soap.proxy.GlobalConstants;
+import org.flas.soap.proxy.config.CacheConfig;
 import org.flas.soap.proxy.services.CacheUtilService;
 import org.jboss.logging.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,9 @@ public class PostCacherFilter extends ZuulFilter {
 
 	@Autowired
 	private CacheUtilService cache;
+	
+	@Autowired
+	private CacheConfig cacheConfig;
 
 	@Override
 	public String filterType() {
@@ -46,9 +50,11 @@ public class PostCacherFilter extends ZuulFilter {
 							? new GZIPInputStream(ctx.getResponseDataStream())
 							: ctx.getResponseDataStream();
 					String response = CharStreams.toString(new InputStreamReader(inputStream, "UTF-8"));
-					boolean isCacheableResponse = cache.isCacheableResponse(response) || key.endsWith(PreCacheFilter.WSDL_SUFIX);
-					if (isCacheableResponse)
+					boolean isCacheableResponse = cacheConfig.getEnabled() && 
+							(cache.isCacheableResponse(response) || key.endsWith(PreCacheFilter.WSDL_SUFIX));
+					if (isCacheableResponse) {
 						cache.put(key, response);
+					}
 					ctx.setResponseBody(response);
 					LOGGER.info("Was Cached: " + isCacheableResponse + "\n REAL RESPONSE: \n" + response);
 					if (isCacheableResponse)

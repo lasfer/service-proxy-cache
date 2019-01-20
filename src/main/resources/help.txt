@@ -1,5 +1,9 @@
 CLEAN  -  cleans all entries in memory cache - no params - no return
-(do not remove files, only removes memory entries)
+(does not remove files, only removes memory entries)
+
+DISABLE_CACHE - Disables caching - no params - no return
+
+ENABLE_CACHE -  Enables caching - no params - no return
 
 DISABLE_FILES - Disables file caching - no params - no return
 

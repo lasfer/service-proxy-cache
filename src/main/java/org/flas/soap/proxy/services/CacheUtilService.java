@@ -209,12 +209,10 @@ public class CacheUtilService {
 	 */
 	public String getAnyFileContentSameService(String service) {
 		StringBuilder contentBuilder = new StringBuilder();
-		String[] stringSplited = service.split("[.]");
-		int length = stringSplited.length;
 		Path dir = Paths.get(cacheConfig.getDirPath());
 		List<File> files = new ArrayList<>();
 
-		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, stringSplited[length - 1] + "\\.*soa")) {
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, service + "\\.*soa")) {
 			for (Path entry : stream) {
 				// excluding wsdls definition files cached on HDD
 				File fileToAdd = entry.toFile();

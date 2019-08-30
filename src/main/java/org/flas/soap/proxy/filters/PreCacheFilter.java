@@ -7,6 +7,8 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.flas.soap.proxy.GlobalConstants;
 import org.flas.soap.proxy.config.CacheConfig;
 import org.flas.soap.proxy.config.Help;
@@ -21,11 +23,13 @@ import com.netflix.zuul.context.RequestContext;
 public class PreCacheFilter extends ZuulFilter {
 	private static final Logger LOGGER = Logger.getLogger(PreCacheFilter.class);
 
+
+
 	private enum Actions {
 		SAVE, CLEAN, ENABLE_FILES, DISABLE_FILES, SET, OFFLINE, ONLINE, KEY, HELP, ENABLE_CACHE, DISABLE_CACHE
 	}
 
-	public static final String WSDL_SUFIX = ".wsdl_GET";
+	public static final String WSDL_SUFIX = ".%s_GET";
 
 	@Autowired
 	private CacheUtilService cache;
@@ -50,20 +54,18 @@ public class PreCacheFilter extends ZuulFilter {
 		} catch (IOException e) {
 			LOGGER.error("error al copiar el contenido del request", e);
 		}
-		String cacheKey;
+	
 		String document = writer.toString();
+		
 		String keyPrefix=getKeyPrefix(document, ctx.getRequest().getRequestURI());
 		
 		boolean get = HttpMethod.GET.name().equals(ctx.getRequest().getMethod());
-		if (get) {
-			cacheKey = keyPrefix + WSDL_SUFIX;
-		} else {
-			cacheKey = cache.generateHash(keyPrefix, document, true);
-		}
+		String cacheKey=StringUtils.EMPTY;
 
 		if (Actions.CLEAN.name().equals(document)) {
 			cache.clean();
 			ctx.setSendZuulResponse(false);
+			writeCurrentConfig(ctx);
 		} else if (document != null && document.startsWith(Actions.KEY.name())) {
 			String[] parts = document.split(":::");
 			try {
@@ -77,7 +79,7 @@ public class PreCacheFilter extends ZuulFilter {
 			try {
 				ctx.getResponse().getOutputStream().write(Help.TEXT.getBytes());
 			} catch (Exception e) {
-				LOGGER.error("Error writting KEY: " + cacheKey, e);
+				LOGGER.error("Error writting HELP", e);
 			}
 			ctx.setSendZuulResponse(false);
 		} else if (Actions.SAVE.name().equals(document)) {
@@ -89,22 +91,27 @@ public class PreCacheFilter extends ZuulFilter {
 		} else if (Actions.DISABLE_FILES.name().equals(document)) {
 			cacheConfig.setFileCaching(false);
 			ctx.setSendZuulResponse(false);
+			writeCurrentConfig(ctx);
 		} else if (Actions.ENABLE_CACHE.name().equals(document)) {
 			cacheConfig.setEnabled(true);
 			ctx.setSendZuulResponse(false);
+			writeCurrentConfig(ctx);
 		} else if (Actions.DISABLE_CACHE.name().equals(document)) {
 			cache.store();
 			cache.clean();
 			cacheConfig.setEnabled(false);
 			ctx.setSendZuulResponse(false);
+			writeCurrentConfig(ctx);
 		} else if (Actions.OFFLINE.name().equals(document)) {
 			// OFFLINE needs filecaching enabled
 			cacheConfig.setFileCaching(true);
 			cacheConfig.setOffline(true);
 			ctx.setSendZuulResponse(false);
+			writeCurrentConfig(ctx);
 		} else if (Actions.ONLINE.name().equals(document)) {
 			cacheConfig.setOffline(false);
 			ctx.setSendZuulResponse(false);
+			writeCurrentConfig(ctx);
 		} else if (document != null && document.startsWith(Actions.SET.name())) {
 			try {
 				String[] parts = document.split(":::");
@@ -116,6 +123,13 @@ public class PreCacheFilter extends ZuulFilter {
 			}
 			ctx.setSendZuulResponse(false);
 		} else {
+			if (get) {
+				String param=ctx.getRequest().getParameter("wsdl")!=null?"wsdl":"";
+				
+				cacheKey = keyPrefix + String.format(WSDL_SUFIX,param );
+			} else {
+				cacheKey = cache.generateHash(keyPrefix, document, true);
+			}
 			LOGGER.info("REQUEST: \n" + document);
 			ctx.set(GlobalConstants.CONTEXT_CACHE_KEY, cacheKey);
 			if (cache.contains(cacheKey) && cacheConfig.getEnabled()) {
@@ -183,5 +197,19 @@ public class PreCacheFilter extends ZuulFilter {
 			method = m.group(1);
 		}
 		return method;
+	}
+	
+	/**
+	 * Returns current configuration in response
+	 * @param ctx
+	 * @return
+	 */
+	public void writeCurrentConfig(RequestContext ctx) {
+		try {
+			ctx.getResponse().getOutputStream()
+					.write(ToStringBuilder.reflectionToString(cacheConfig, ToStringStyle.MULTI_LINE_STYLE).getBytes());
+		} catch (Exception e) {
+			LOGGER.error("error writing configurations to response", e);
+		}
 	}
 }

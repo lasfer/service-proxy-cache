@@ -2,6 +2,8 @@ package org.flas.soap.proxy.services;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -17,6 +19,14 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
+import javax.xml.XMLConstants;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.BooleanUtils;
@@ -42,6 +52,18 @@ import com.google.common.cache.CacheBuilder;
 public class CacheUtilService {
 	private static final Logger LOGGER = Logger.getLogger(CacheUtilService.class);
 
+	private static TransformerFactory factoryTransformer;
+	static {
+		try {
+			factoryTransformer = TransformerFactory.newInstance();
+			factoryTransformer.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+			factoryTransformer.setAttribute("indent-number", new Integer(2));
+		} catch (Exception e) {
+			factoryTransformer = null;
+			LOGGER.error("Error configurando factory para formatear", e);
+		}
+	}
+	
 	private Cache<String, String> cache;
 	@Autowired
 	private CacheConfig cacheConfig;
@@ -112,7 +134,8 @@ public class CacheUtilService {
 	 * @return String with generated key
 	 */
 	public String generateHash(String service, String document, boolean trimAllSpaces) {
-
+		//format xml before generate hash
+		document=getFormattedString(document);
 		String documentAux = null;
 		String startTag = cacheConfig.getStartTagForKey();
 		String endTag = cacheConfig.getEndTagForKey();
@@ -130,7 +153,10 @@ public class CacheUtilService {
 			documentAux = documentAux.replaceAll(exclude + "?.*?" + exclude, "");
 		}
 		documentAux = trimAllSpaces ? documentAux.replaceAll("\\s", "") : documentAux;
-
+		//remove open and close namespaces
+		documentAux=documentAux.replaceAll("(<)(\\w+:)(.*?>)", "$1$3");
+		documentAux=documentAux.replaceAll("(</)(\\w+:)(.*?>)", "$1$3");
+		
 		return service + "." + documentAux.hashCode();
 	}
 
@@ -254,5 +280,28 @@ public class CacheUtilService {
 	 */
 	public long size() {
 		return cache.size();
+	}
+	
+	
+	/**
+	 * Format XML request to avoid indent differences
+	 * Normalize empty tags to <a/> (Some soap clients sends <a></a>, other clients <a/>)
+	 * 
+	 * @param xmlData
+	 * @return
+	 */
+	private static String getFormattedString(String xmlData) {
+		try {
+			Transformer tf = factoryTransformer.newTransformer();
+			tf.setOutputProperty(OutputKeys.INDENT, "yes");
+			StringWriter stringWriter = new StringWriter();
+			StreamResult xmlOutput = new StreamResult(stringWriter);
+			Source xmlInput = new StreamSource(new StringReader(xmlData));
+			tf.transform(xmlInput, xmlOutput);
+			return xmlOutput.getWriter().toString();
+		} catch (TransformerException e) {
+			LOGGER.error("error transforming xml request", e);
+			return xmlData;
+		}
 	}
 }

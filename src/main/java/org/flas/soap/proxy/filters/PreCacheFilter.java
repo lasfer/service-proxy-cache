@@ -7,8 +7,8 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.lang3.builder.ToStringStyle;
+import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang.builder.ToStringStyle;
 import org.flas.soap.proxy.GlobalConstants;
 import org.flas.soap.proxy.config.CacheConfig;
 import org.flas.soap.proxy.config.Help;
@@ -194,7 +194,7 @@ public class PreCacheFilter extends ZuulFilter {
 		Matcher m = p.matcher(document);
 		String method = StringUtils.EMPTY;
 		while (m.find()) {
-			method = m.group(1);
+			method = m.group(2);
 		}
 		return method;
 	}

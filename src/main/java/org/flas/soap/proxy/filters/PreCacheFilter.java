@@ -2,6 +2,7 @@ package org.flas.soap.proxy.filters;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,7 +58,7 @@ public class PreCacheFilter extends ZuulFilter {
 	
 		String document = writer.toString();
 		
-		String keyPrefix=getKeyPrefix(document, ctx.getRequest().getRequestURI());
+		String keyPrefix=StringUtils.EMPTY;
 		
 		boolean get = HttpMethod.GET.name().equals(ctx.getRequest().getMethod());
 		String cacheKey=StringUtils.EMPTY;
@@ -69,6 +70,7 @@ public class PreCacheFilter extends ZuulFilter {
 		} else if (document != null && document.startsWith(Actions.KEY.name())) {
 			String[] parts = document.split(":::");
 			try {
+				keyPrefix=getKeyPrefix(parts[1], ctx.getRequest().getRequestURI());
 				cacheKey = cache.generateHash(keyPrefix, parts[1], true);
 				ctx.getResponse().getOutputStream().write(("key:    " + cacheKey).getBytes());
 			} catch (Exception e) {
@@ -115,6 +117,7 @@ public class PreCacheFilter extends ZuulFilter {
 		} else if (document != null && document.startsWith(Actions.SET.name())) {
 			try {
 				String[] parts = document.split(":::");
+				keyPrefix=getKeyPrefix(parts[1], ctx.getRequest().getRequestURI());
 				cacheKey = cache.generateHash(keyPrefix, parts[1], true);
 				cache.put(cacheKey, parts[2]);
 				ctx.getResponse().getOutputStream().write(("SAVED:" + cacheKey).getBytes());
@@ -123,6 +126,7 @@ public class PreCacheFilter extends ZuulFilter {
 			}
 			ctx.setSendZuulResponse(false);
 		} else {
+			keyPrefix=getKeyPrefix(document, ctx.getRequest().getRequestURI());
 			if (get) {
 				String param=ctx.getRequest().getParameter("wsdl")!=null?"wsdl":"";
 				

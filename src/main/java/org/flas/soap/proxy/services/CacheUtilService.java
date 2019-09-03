@@ -152,10 +152,12 @@ public class CacheUtilService {
 		for (String exclude : excludes) {
 			documentAux = documentAux.replaceAll(exclude + "?.*?" + exclude, "");
 		}
+		// remove open and close namespaces
+		documentAux = documentAux.replaceAll("(<)(\\w+:)(.*?>)", "$1$3");
+		documentAux = documentAux.replaceAll("(</)(\\w+:)(.*?>)", "$1$3");
+		documentAux = documentAux.replaceAll(":ns1", "");
 		documentAux = trimAllSpaces ? documentAux.replaceAll("\\s", "") : documentAux;
-		//remove open and close namespaces
-		documentAux=documentAux.replaceAll("(<)(\\w+:)(.*?>)", "$1$3");
-		documentAux=documentAux.replaceAll("(</)(\\w+:)(.*?>)", "$1$3");
+		
 		
 		return service + "." + documentAux.hashCode();
 	}

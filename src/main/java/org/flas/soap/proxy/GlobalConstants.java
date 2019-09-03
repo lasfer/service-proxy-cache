@@ -11,5 +11,6 @@ public class GlobalConstants {
 	}
 
 	public static final String CONTEXT_CACHE_KEY = "CONTEXT_CACHE_KEY";
+	public static final String CONTEXT_CACHE_KEY_PREFIX = "CONTEXT_CACHE_KEY_PREFIX";
 
 }

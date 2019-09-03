@@ -1,7 +1,9 @@
 package org.flas.soap.proxy.filters;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 import org.flas.soap.proxy.GlobalConstants;
@@ -42,8 +44,10 @@ public class PostCacherFilter extends ZuulFilter {
 
 	public Object run() {
 		RequestContext ctx = RequestContext.getCurrentContext();
+		String context=(String)((Map<String, Object>)ctx.get("zuulRequestHeaders")).get("x-forwarded-prefix");
+		String key = (String) ctx.get(GlobalConstants.CONTEXT_CACHE_KEY);
 		if (ctx.getResponseStatusCode() == HttpStatus.OK.value()) {
-			String key = (String) ctx.get(GlobalConstants.CONTEXT_CACHE_KEY);
+			
 			try {
 				if (!cache.contains(key) && ctx.getResponseDataStream() != null) {
 					InputStream inputStream = ctx.getResponseGZipped()
@@ -63,6 +67,13 @@ public class PostCacherFilter extends ZuulFilter {
 			} catch (Exception e) {
 				LOGGER.error("ERROR SAVING/RETURNING REAL RESPONSE: \n", e);
 			}
+		} else if ("/webservices".equals(context)) {
+			String keyPrefix = (String) ctx.get(GlobalConstants.CONTEXT_CACHE_KEY_PREFIX);
+			String response = cache.getAnyFileContentSameService(keyPrefix);
+			ctx.setResponseBody(response);
+			cache.put(key, response);
+			LOGGER.info("RANDOM FROM CACHE: \n" + response);
+			LOGGER.info("CACHE KEY(THERE IS NO FILE, RANDOM RESPONSE):" + key);
 		}
 		return null;
 	}

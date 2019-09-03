@@ -2,7 +2,6 @@ package org.flas.soap.proxy.filters;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -136,6 +135,7 @@ public class PreCacheFilter extends ZuulFilter {
 			}
 			LOGGER.info("REQUEST: \n" + document);
 			ctx.set(GlobalConstants.CONTEXT_CACHE_KEY, cacheKey);
+			ctx.set(GlobalConstants.CONTEXT_CACHE_KEY_PREFIX, keyPrefix);
 			if (cache.contains(cacheKey) && cacheConfig.getEnabled()) {
 				try {
 					ctx.getResponse().getOutputStream().write(cache.get(cacheKey).getBytes());

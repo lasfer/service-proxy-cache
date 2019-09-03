@@ -25,7 +25,7 @@ public class PreCacheFilter extends ZuulFilter {
 
 
 
-	private enum Actions {
+	public enum Actions {
 		SAVE, CLEAN, ENABLE_FILES, DISABLE_FILES, SET, OFFLINE, ONLINE, KEY, HELP, ENABLE_CACHE, DISABLE_CACHE
 	}
 
@@ -117,6 +117,8 @@ public class PreCacheFilter extends ZuulFilter {
 			try {
 				String[] parts = document.split(":::");
 				keyPrefix=getKeyPrefix(parts[1], ctx.getRequest().getRequestURI());
+				ctx.set(GlobalConstants.CONTEXT_CACHE_KEY_PREFIX, keyPrefix);
+				ctx.set(GlobalConstants.CONTEXT_CACHE_OPERATION, Actions.SET.name());
 				cacheKey = cache.generateHash(keyPrefix, parts[1], true);
 				cache.put(cacheKey, parts[2]);
 				ctx.getResponse().getOutputStream().write(("SAVED:" + cacheKey).getBytes());

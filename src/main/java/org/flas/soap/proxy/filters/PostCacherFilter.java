@@ -67,7 +67,7 @@ public class PostCacherFilter extends ZuulFilter {
 			} catch (Exception e) {
 				LOGGER.error("ERROR SAVING/RETURNING REAL RESPONSE: \n", e);
 			}
-		} else if ("/webservices".equals(context)) {
+		} else if ("/webservices".equals(context) && !PreCacheFilter.Actions.SET.name().equals((String)ctx.get(GlobalConstants.CONTEXT_CACHE_OPERATION))) {
 			String keyPrefix = (String) ctx.get(GlobalConstants.CONTEXT_CACHE_KEY_PREFIX);
 			String response = cache.getAnyFileContentSameService(keyPrefix);
 			ctx.setResponseBody(response);

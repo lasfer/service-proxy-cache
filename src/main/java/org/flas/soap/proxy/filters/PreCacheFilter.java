@@ -29,7 +29,7 @@ public class PreCacheFilter extends ZuulFilter {
 		SAVE, CLEAN, ENABLE_FILES, DISABLE_FILES, SET, OFFLINE, ONLINE, KEY, HELP, ENABLE_CACHE, DISABLE_CACHE
 	}
 
-	public static final String WSDL_SUFIX = ".%s_GET";
+	public static final String WSDL_SUFIX = ".wsdl_GET";
 
 	@Autowired
 	private CacheUtilService cache;
@@ -129,9 +129,7 @@ public class PreCacheFilter extends ZuulFilter {
 		} else {
 			keyPrefix=getKeyPrefix(document, ctx.getRequest().getRequestURI());
 			if (get) {
-				String param=ctx.getRequest().getParameter("wsdl")!=null?"wsdl":"";
-				
-				cacheKey = keyPrefix + String.format(WSDL_SUFIX,param );
+				cacheKey = keyPrefix + WSDL_SUFIX;
 			} else {
 				cacheKey = cache.generateHash(keyPrefix, document, true);
 			}
